@@ -1,6 +1,6 @@
 ﻿// Each #kernel tells which function to compile; you can have many kernels
 #include "SPHLib.compute"
-#include "Sort.compute"
+// #include "Sort.compute"
 
 RWTexture2D<float4> Result;
 // RWStructuredBuffer<Particle> _Particles;
@@ -17,7 +17,7 @@ RWTexture2D<float4> Result;
 //     m_k = _k;
 // }
 
-#define numThreads 1024
+#define numThreads 512
 
 
 #pragma kernel SortParticles

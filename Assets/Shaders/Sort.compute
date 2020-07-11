@@ -1,7 +1,7 @@
 ﻿#ifndef SORT_COMPUTE
 #define SORT_COMPUTE
 
-#include "SPHLib.compute"
+// #include "SPHLib.compute"
 //  y   z
 //  |  /
 //  | /
@@ -9,7 +9,7 @@
 
 int XYZtoNindex(float3 index, float3 size)
 {
-    if(index.x >= size.x || index.y >= size.y || index.z >= size.z)
+    if(index.x > size.x || index.y > size.y || index.z > size.z)
     {
         return -1;
     }
@@ -20,7 +20,7 @@ int XYZtoNindex(float3 index, float3 size)
 }
 
 float3 NtoXYZindex(int n, float3 size){
-    if(n >= size.x * size.y * size.z)
+    if(n > size.x * size.y * size.z)
     {
         return float3(-1, -1, -1);
     }
@@ -31,25 +31,5 @@ float3 NtoXYZindex(int n, float3 size){
     return float3(x, y, z);
 }
 
-void AssignCell(inout Particle particle)
-{
-    // float3 index = float3(
-    //     floor(particle.position.x / m_size.x * m_cellCount.x),
-    //     floor(particle.position.y / m_size.y * m_cellCount.y),
-    //     floor(particle.position.z / m_size.z * m_cellCount.z)
-    // );
-    // particle.cellId = XYZtoNindex(index, m_cellCount);
-}
-
-
-bool IsAdjacentCell(int index, int other)
-{
-    float3 indexCoord = NtoXYZindex(index, m_cellCount);
-    float3 otherCoord = NtoXYZindex(other, m_cellCount);
-    return 
-        abs(indexCoord.x - otherCoord.x) <= 1 
-        || abs(indexCoord.y - otherCoord.y) <= 1 
-        || abs(indexCoord.z - otherCoord.z) <= 1;
-}
 
 #endif

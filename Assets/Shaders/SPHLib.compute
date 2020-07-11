@@ -30,6 +30,29 @@ float m_k;
 
 #include "Sort.compute"
 
+
+void AssignCell(inout Particle particle)
+{
+    float3 index = float3(
+        floor((particle.position.x - m_minBound.x) /(m_maxBound.x - m_minBound.x) * m_cellCount.x),
+        floor((particle.position.y - m_minBound.y) /(m_maxBound.y - m_minBound.y) * m_cellCount.y),
+        floor((particle.position.z - m_minBound.z) /(m_maxBound.z - m_minBound.z) * m_cellCount.z)
+    );
+    particle.cellId = XYZtoNindex(index, m_cellCount);
+}
+
+
+bool IsAdjacentCell(int index, int other)
+{
+    float3 indexCoord = NtoXYZindex(index, m_cellCount);
+    float3 otherCoord = NtoXYZindex(other, m_cellCount);
+    return 
+        abs(indexCoord.x - otherCoord.x) <= 1 
+        || abs(indexCoord.y - otherCoord.y) <= 1 
+        || abs(indexCoord.z - otherCoord.z) <= 1;
+}
+
+
 void GetRho(inout Particle particle)
 {
     float sum = 0.0f;
@@ -117,67 +140,38 @@ void ApplyForces(inout Particle particle)
 
 void Bound(inout Particle particle)
 {
-    // check xmin
-    // if(m_minBound.x >= min(particle.position.x, particle._prevPosition.x)
-    //     && m_minBound.x <= max(particle.position.x, particle._prevPosition.x))
     if(particle.position.x < m_minBound.x)
     {
-        // particle._prevPosition.x -= 2.0 * m_minBound.x;
-        // particle.position.x -= 2.0 * m_minBound.x;
-        particle._prevPosition.x = -1.0 * particle.position.x + 2.0 * m_minBound.x;
+        particle._prevPosition.x = -1.0 * particle._prevPosition.x + 2.0 * m_minBound.x;
         particle.position.x = -1.0 * particle.position.x + 2.0 * m_minBound.x;
     }
-    // check xmax
-    // if(m_maxBound.x >= min(particle.position.x, particle._prevPosition.x)
-    //     && m_maxBound.x <= max(particle.position.x, particle._prevPosition.x))
     if(particle.position.x > m_maxBound.x)
     {
-        particle._prevPosition.x = -1.0 * particle.position.x + 2.0 * m_maxBound.x;
+        particle._prevPosition.x = -1.0 * particle._prevPosition.x + 2.0 * m_maxBound.x;
         particle.position.x = -1.0 * particle.position.x + 2.0 * m_maxBound.x;
     }
-    // check ymin
-    // if(m_minBound.y >= min(particle.position.y, particle._prevPosition.y)
-    //     && m_minBound.y <= max(particle.position.y, particle._prevPosition.y))
     if(particle.position.y < m_minBound.y)
     {
-        // particle._prevPosition.y -= 2.0 * m_minBound.y;
-        // particle.position.y -= 2.0 * m_minBound.y;
-        // particle.position = float3(0, 0, 0);
-        // float3 temp = particle._prevPosition;
-        particle._prevPosition.y = -1.0 * particle.position.y + 2.0 * m_minBound.y;
+        particle._prevPosition.y = -1.0 * particle._prevPosition.y + 2.0 * m_minBound.y;
         particle.position.y = -1.0 * particle.position.y + 2.0 * m_minBound.y;
     }
-    // check ymax
-    // if(m_maxBound.y >= min(particle.position.y, particle._prevPosition.y)
-    //     && m_maxBound.y <= max(particle.position.y, particle._prevPosition.y))
     if(particle.position.y > m_maxBound.y)
     {
-        // particle._prevPosition.y -= 2.0 * m_maxBound.y;
-        // particle.position.y -= 2.0 * m_maxBound.y;
-        particle._prevPosition.y = -1.0 * particle.position.y + 2.0 * m_maxBound.y;
+        particle._prevPosition.y = -1.0 * particle._prevPosition.y + 2.0 * m_maxBound.y;
         particle.position.y = -1.0 * particle.position.y + 2.0 * m_maxBound.y;
     }
-    // check zmin
-    // if(m_minBound.z >= min(particle.position.z, particle._prevPosition.z)
-    //     && m_minBound.z <= max(particle.position.z, particle._prevPosition.z))
     if(particle.position.z < m_minBound.z)
     {
-        // particle._prevPosition.z -= 2.0 * m_minBound.z;
-        // particle.position.z -= 2.0 * m_minBound.z;
-        particle._prevPosition.z = -1.0 * particle.position.z + 2.0 * m_minBound.z;
+        particle._prevPosition.z = -1.0 * particle._prevPosition.z + 2.0 * m_minBound.z;
         particle.position.z = -1.0 * particle.position.z + 2.0 * m_minBound.z;
     }
-    // check zmax
-    // if(m_maxBound.z >= min(particle.position.z, particle._prevPosition.z)
-    //     && m_maxBound.z <= max(particle.position.z, particle._prevPosition.z))
     if(particle.position.z > m_maxBound.z)
     {
-        // particle._prevPosition.z -= 2.0 * m_maxBound.z;
-        // particle.position.z -= 2.0 * m_maxBound.z;
-        particle._prevPosition.z = -1.0 * particle.position.z + 2.0 * m_maxBound.z;
+        particle._prevPosition.z = -1.0 * particle._prevPosition.z + 2.0 * m_maxBound.z;
         particle.position.z = -1.0 * particle.position.z + 2.0 * m_maxBound.z;
     }
 }
+
 
 // float3 ApplyForces(inout Particle particle)
 // {

@@ -24,7 +24,7 @@ public struct Particle
 [System.Serializable]
 public class SPHSim
 {
-    const int numThreads = 1024;
+    const int numThreads = 512;
     public Vector3 MinBound;
     public Vector3 MaxBound;
     public Vector3 CellCount;

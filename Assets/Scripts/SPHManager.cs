@@ -13,16 +13,17 @@ public class SPHManager : MonoBehaviour
     void Start()
     {
         sim = new SPHSim(shader, inst);
-        sim.MinBound = new Vector3(1, 1, 1);
-        sim.MaxBound = new Vector3(4, 4, 4);
-        sim.CellCount = new Vector3(1, 1, 1);
+        sim.MinBound = new Vector3(0, 0, 0);
+        sim.MaxBound = new Vector3(5, 20, 1);
+        sim.CellCount = new Vector3(5, 10, 4);
         sim.TimeStep = .05f;
 
         sim.Mass = 5.0f;
-        sim.NumParticles = 1024 * 2;
+        sim.NumParticles = 512 * 4;
 
         sim.Viscosity = 1f;
         sim.RestDensity = 82.0f;
+
         sim.Gravity = Physics.gravity;
         sim.H = .7f;
         sim.K = 50.0f;
