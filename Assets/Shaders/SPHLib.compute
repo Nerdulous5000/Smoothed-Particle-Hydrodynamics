@@ -1,0 +1,251 @@
+#ifndef KERNEL_COMPUTE
+#define KERNEL_COMPUTE
+#include "Kernel.compute"
+
+struct Particle
+{
+    int id;
+    int cellId;
+    float3 position;
+    // float3 velocity;
+    float mass; 
+    float _rho;
+    float _p;
+    float3 _delP;
+    float3 _visc;
+    // float3 _prevForce;
+    float3 _prevPosition;
+};
+RWStructuredBuffer<Particle> m_particles;
+int m_numParticles;
+float3 m_minBound;
+float3 m_maxBound;
+float3 m_cellCount;
+float m_timeStep;
+float m_viscosity;
+float m_h;
+float3 m_gravity;
+float m_restDensity;
+float m_k;
+
+#include "Sort.compute"
+
+void GetRho(inout Particle particle)
+{
+    float sum = 0.0f;
+    for (int n = 0; n < m_numParticles; n++)
+    {
+        Particle other = m_particles.Load(n);
+        // Particle other = m_particles[n];
+        if (other.id != particle.id && IsAdjacentCell(particle.cellId, other.cellId))
+        {
+            sum += other.mass * Weight(particle.position, other.position, m_h);
+        }
+    }
+    particle._rho = sum;
+}
+
+void GetP(inout Particle particle)
+{
+    particle._p = m_k * (particle._rho - m_restDensity);
+}
+
+// Del P over Rho
+void GetDelP(inout Particle particle)
+{
+    // float coeff = ;
+    float3 sum = float3(0, 0, 0);
+
+    for (int n = 0; n < m_numParticles; n++)
+    {
+        Particle other = m_particles.Load(n);
+        if (other.id != particle.id && IsAdjacentCell(particle.cellId, other.cellId))
+        {
+            // sum -= other.mass *
+            //     (particle._p / Mathf.Pow(particle._rho, 2) + other._p / Mathf.Pow(other._rho, 2)) *
+            //     DelWeight(particle.position, other.position, h);
+            sum -= (particle._p + other._p)
+                / (2.0f * particle._rho * other._rho)
+                // (other.mass / other._rho) *
+                * DelWeight(particle.position, other.position, m_h);
+            // Debug.Log(DelWeight(particle.position, other.position, h).ToString("F10"));
+
+        }
+    }
+    // particle._delP = coeff * sum;
+    // return float3(.1, .1, .1);
+    // sum *= -1.0f;
+    particle._delP = sum;
+    // return sum;
+}
+
+// Mu / Rho * Laplacian(visc)
+void GetVisc(inout Particle particle)
+{
+    float3 velocity = particle.position - particle._prevPosition;
+    float3 sum = float3(0, 0, 0);
+    for (int n = 0; n < m_numParticles; n++)
+    {
+        Particle other = m_particles.Load(n);
+        if (other.id != particle.id && IsAdjacentCell(particle.cellId, other.cellId))
+        {
+            float3 otherVelocity = other.position - other._prevPosition;
+            sum += other.mass * (otherVelocity - velocity) / particle._rho
+                * Del2Weight(particle.position, other.position, m_h);
+        }
+    }
+    particle._visc = sum * m_viscosity;
+}
+
+float3 GetForces(Particle particle)
+{
+    float3 internalForces = particle._delP + particle._visc;
+    float3 externalForces = m_gravity;
+    return internalForces + externalForces;
+}
+
+
+// Verlet integration
+void ApplyForces(inout Particle particle)
+{
+    float3 pos = particle.position;
+    particle.position = 2.0 * pos - particle._prevPosition + m_timeStep * m_timeStep * GetForces(particle);
+    particle._prevPosition = pos;
+    
+    // if wall between points reflect pos and oldPos
+}
+
+void Bound(inout Particle particle)
+{
+    // check xmin
+    // if(m_minBound.x >= min(particle.position.x, particle._prevPosition.x)
+    //     && m_minBound.x <= max(particle.position.x, particle._prevPosition.x))
+    if(particle.position.x < m_minBound.x)
+    {
+        // particle._prevPosition.x -= 2.0 * m_minBound.x;
+        // particle.position.x -= 2.0 * m_minBound.x;
+        particle._prevPosition.x = -1.0 * particle.position.x + 2.0 * m_minBound.x;
+        particle.position.x = -1.0 * particle.position.x + 2.0 * m_minBound.x;
+    }
+    // check xmax
+    // if(m_maxBound.x >= min(particle.position.x, particle._prevPosition.x)
+    //     && m_maxBound.x <= max(particle.position.x, particle._prevPosition.x))
+    if(particle.position.x > m_maxBound.x)
+    {
+        particle._prevPosition.x = -1.0 * particle.position.x + 2.0 * m_maxBound.x;
+        particle.position.x = -1.0 * particle.position.x + 2.0 * m_maxBound.x;
+    }
+    // check ymin
+    // if(m_minBound.y >= min(particle.position.y, particle._prevPosition.y)
+    //     && m_minBound.y <= max(particle.position.y, particle._prevPosition.y))
+    if(particle.position.y < m_minBound.y)
+    {
+        // particle._prevPosition.y -= 2.0 * m_minBound.y;
+        // particle.position.y -= 2.0 * m_minBound.y;
+        // particle.position = float3(0, 0, 0);
+        // float3 temp = particle._prevPosition;
+        particle._prevPosition.y = -1.0 * particle.position.y + 2.0 * m_minBound.y;
+        particle.position.y = -1.0 * particle.position.y + 2.0 * m_minBound.y;
+    }
+    // check ymax
+    // if(m_maxBound.y >= min(particle.position.y, particle._prevPosition.y)
+    //     && m_maxBound.y <= max(particle.position.y, particle._prevPosition.y))
+    if(particle.position.y > m_maxBound.y)
+    {
+        // particle._prevPosition.y -= 2.0 * m_maxBound.y;
+        // particle.position.y -= 2.0 * m_maxBound.y;
+        particle._prevPosition.y = -1.0 * particle.position.y + 2.0 * m_maxBound.y;
+        particle.position.y = -1.0 * particle.position.y + 2.0 * m_maxBound.y;
+    }
+    // check zmin
+    // if(m_minBound.z >= min(particle.position.z, particle._prevPosition.z)
+    //     && m_minBound.z <= max(particle.position.z, particle._prevPosition.z))
+    if(particle.position.z < m_minBound.z)
+    {
+        // particle._prevPosition.z -= 2.0 * m_minBound.z;
+        // particle.position.z -= 2.0 * m_minBound.z;
+        particle._prevPosition.z = -1.0 * particle.position.z + 2.0 * m_minBound.z;
+        particle.position.z = -1.0 * particle.position.z + 2.0 * m_minBound.z;
+    }
+    // check zmax
+    // if(m_maxBound.z >= min(particle.position.z, particle._prevPosition.z)
+    //     && m_maxBound.z <= max(particle.position.z, particle._prevPosition.z))
+    if(particle.position.z > m_maxBound.z)
+    {
+        // particle._prevPosition.z -= 2.0 * m_maxBound.z;
+        // particle.position.z -= 2.0 * m_maxBound.z;
+        particle._prevPosition.z = -1.0 * particle.position.z + 2.0 * m_maxBound.z;
+        particle.position.z = -1.0 * particle.position.z + 2.0 * m_maxBound.z;
+    }
+}
+
+// float3 ApplyForces(inout Particle particle)
+// {
+//         float3 currentForce = GetForces(particle);
+
+//         particle.velocity += 0.5f * (particle._prevForce + currentForce) * m_timeStep;
+//         particle.position += particle.velocity * m_timeStep + 0.5f * currentForce * m_timeStep * m_timeStep;
+//         return currentForce;
+// }
+
+// void Clamp(inout float3 vec)
+// {
+//     vec.x = clamp(vec.x, 0.0f, m_size.x);
+//     // vec.y = Clamp(vec.y, 0.0f, Size);
+//     vec.y = max(vec.y, 0.0f);
+//     vec.z = clamp(vec.z, 0.0f, m_size.z);
+// }
+
+// void Bound(inout Particle particle)
+// {
+//         Clamp(particle.position);
+//         if (particle.position.y == 0)
+//         {
+//             particle.velocity.y = max(particle.velocity.y, 0.0f);
+//         }
+//         if (particle.position.x == 0)
+//         {
+//             particle.velocity.x = max(particle.velocity.x, 0.0f);
+//         }
+//         if (particle.position.x == m_size.x)
+//         {
+//             particle.velocity.x = min(particle.velocity.x, 0.0f);
+//         }
+//         if (particle.position.z == 0)
+//         {
+//             particle.velocity.z = max(particle.velocity.z, 0.0f);
+//         }
+//         if (particle.position.z == m_size.z)
+//         {
+//             particle.velocity.z = min(particle.velocity.z, 0.0f);
+//         }
+// }
+
+// void SetBackForce(inout Particle particle, float3 force)
+// {
+//         particle._prevForce = force;
+// }
+
+// void Simulate()
+// {
+//     int n;
+//     for(n = 0; n < m_numParticles; n++)
+//     {
+//         Particle particle = m_particles.Load(n);
+//         particle._rho = max(GetRho(particle), m_restDensity);
+//         particle._p = GetP(particle,  m_numParticles);
+//     }
+//     for (n = 0; n < m_numParticles; n++)
+//     {
+//         Particle particle = m_particles.Load(n);
+//         particle._delP = GetDelP(particle, m_numParticles);
+//         particle._visc = GetVisc(particle, m_numParticles);
+//     }
+//     for (n = 0; n < m_numParticles; n++)
+//     {
+//         Particle particle = m_particles.Load(n);
+//     }
+// }
+
+
+#endif

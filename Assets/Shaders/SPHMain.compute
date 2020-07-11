@@ -1,0 +1,54 @@
+﻿// Each #kernel tells which function to compile; you can have many kernels
+#include "SPHLib.compute"
+#include "Sort.compute"
+
+RWTexture2D<float4> Result;
+// RWStructuredBuffer<Particle> _Particles;
+
+// void SetInitialValues()
+// {
+//     m_particles = _Particles;
+//     m_numParticles = _numParticles;
+//     m_size = _size;
+//     m_viscosity = _viscosity;
+//     m_h = _h;
+//     m_gravity = _gravity;
+//     m_restDensity = _restDensity;
+//     m_k = _k;
+// }
+
+#define numThreads 1024
+
+
+#pragma kernel SortParticles
+[numthreads(numThreads,1,1)]
+void SortParticles (uint3 id : SV_DispatchThreadID)
+{
+    AssignCell(m_particles[id.x]);
+}
+
+#pragma kernel SetValues
+[numthreads(numThreads,1,1)]
+void SetValues (uint3 id : SV_DispatchThreadID)
+{
+    GetRho(m_particles[id.x]);
+    GetP(m_particles[id.x]);
+}
+
+#pragma kernel CalculateForces
+[numthreads(numThreads,1,1)]
+void CalculateForces (uint3 id : SV_DispatchThreadID)
+{
+    GetDelP(m_particles[id.x]);
+    GetVisc(m_particles[id.x]);
+}
+
+#pragma kernel ApplyForces
+[numthreads(numThreads,1,1)]
+void ApplyForces (uint3 id : SV_DispatchThreadID)
+{
+    ApplyForces(m_particles[id.x]);
+    Bound(m_particles[id.x]);
+
+}
+

@@ -1,0 +1,39 @@
+﻿
+#define PI 3.14159265358
+
+float Weight(float3 r, float3 rb, float h)
+{
+    float distR = distance(r, rb);
+    if (distR > h)
+    {
+        // return (315.0f / (64.0f * Mathf.PI * Mathf.Pow(h, 9))) * Mathf.Pow(h * h - distR * distR, 3);
+        return 0.0;
+    }
+    else
+    {
+        return (315.0 / (64.0 * PI * sign(h) * pow(abs(h), 9)))
+        * pow(h * h - distR * distR, 3);
+    }
+}
+float3 DelWeight(float3 r, float3 rb, float h)
+{
+
+    float distR = distance(r, rb);
+    if(distR > h){
+        return float3(0, 0, 0);
+    }
+    return -1.0 * 45.0 / (PI * pow(h, 6))
+        * normalize(r-rb)
+        * (h - distR) * (h - distR);
+}
+
+float Del2Weight(float3 r, float3 rb, float h)
+{
+    float distR = distance(r, rb);
+    if (distR > h)
+    {
+        return 0.0;
+    }
+    return 45.0 / (PI * pow(h, 6))
+    * (h - distR);
+}
